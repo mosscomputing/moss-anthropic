@@ -1,8 +1,13 @@
 # moss-anthropic
 
-MOSS signing integration for Anthropic SDK (Claude). **Unsigned output is broken output.**
+Cryptographic signing for Anthropic SDK (Claude) outputs using ML-DSA-44 post-quantum signatures.
 
 [![PyPI](https://img.shields.io/pypi/v/moss-anthropic)](https://pypi.org/project/moss-anthropic/)
+[![License](https://img.shields.io/badge/license-BSL--1.1-blue)](LICENSE)
+
+## Overview
+
+moss-anthropic integrates MOSS cryptographic signing into your Anthropic SDK usage. Every tool use, response, and text block gets a tamper-evident signature using ML-DSA-44 (NIST FIPS 204), the post-quantum cryptographic standard. This creates an immutable audit trail for compliance, debugging, and accountability.
 
 ## Installation
 
@@ -12,15 +17,12 @@ pip install moss-anthropic
 
 ## Quick Start
 
-Sign tool use, responses, and text blocks from Claude:
-
 ```python
 from anthropic import Anthropic
-from moss_anthropic import sign_tool_use, sign_response, sign_text
+from moss_anthropic import sign_tool_use, sign_response
 
 client = Anthropic()
 
-# Get a response with tool use
 response = client.messages.create(
     model="claude-sonnet-4-20250514",
     max_tokens=1024,
@@ -31,24 +33,41 @@ response = client.messages.create(
 # Sign the full response
 result = sign_response(response, agent_id="weather-bot")
 print(f"Signed: {result.signature[:20]}...")
+```
+
+## Features
+
+- **ML-DSA-44 signatures** - Post-quantum cryptographic standard (NIST FIPS 204)
+- **Tool use signing** - Sign every Claude tool use block
+- **Response signing** - Sign full Message responses
+- **Text signing** - Sign individual text blocks
+- **Policy enforcement** - Block high-risk actions with enterprise policies
+- **Offline verification** - Verify signatures without network access
+
+## Usage Examples
+
+### Basic Usage
+
+```python
+from moss_anthropic import sign_tool_use, sign_response, verify_envelope
 
 # Sign individual tool use blocks
 for block in response.content:
     if block.type == "tool_use":
-        result = sign_tool_use(block, agent_id="weather-bot")
+        result = sign_tool_use(block, agent_id="my-bot")
+
+# Verify any envelope
+verify_result = verify_envelope(result.envelope)
+print(f"Valid: {verify_result.valid}, Subject: {verify_result.subject}")
 ```
 
-## Enterprise Mode
-
-Set `MOSS_API_KEY` for automatic policy evaluation:
+### With Policy Enforcement
 
 ```python
 import os
 os.environ["MOSS_API_KEY"] = "your-api-key"
 
-from moss_anthropic import sign_tool_use, enterprise_enabled
-
-print(f"Enterprise: {enterprise_enabled()}")  # True
+from moss_anthropic import sign_tool_use
 
 result = sign_tool_use(
     tool_use_block,
@@ -60,17 +79,7 @@ if result.blocked:
     print(f"Blocked by policy: {result.policy.reason}")
 ```
 
-## Verification
-
-```python
-from moss_anthropic import verify_envelope
-
-verify_result = verify_envelope(result.envelope)
-if verify_result.valid:
-    print(f"Signed by: {verify_result.subject}")
-```
-
-## All Functions
+## API Reference
 
 | Function | Description |
 |----------|-------------|
@@ -83,27 +92,21 @@ if verify_result.valid:
 | `sign_message()` | Alias for sign_response |
 | `sign_message_async()` | Async version |
 | `verify_envelope()` | Verify a signed envelope |
+| `enterprise_enabled()` | Check if enterprise mode is active |
 
-## Enterprise Features
+## Configuration
 
-| Feature | Free | Enterprise |
-|---------|------|------------|
-| Local signing | ✓ | ✓ |
-| Offline verification | ✓ | ✓ |
-| Policy evaluation | - | ✓ |
-| Evidence retention | - | ✓ |
-| Audit exports | - | ✓ |
+| Environment Variable | Description |
+|---------------------|-------------|
+| `MOSS_API_KEY` | API key for enterprise features (policy enforcement, SIEM) |
+| `MOSS_API_URL` | Custom API endpoint (default: api.mosscomputing.com) |
 
 ## Links
 
-- [moss-sdk](https://pypi.org/project/moss-sdk/) - Core MOSS SDK
-- [mosscomputing.com](https://mosscomputing.com) - Project site
+- [Documentation](https://docs.mosscomputing.com/sdks/anthropic)
+- [Dashboard](https://app.mosscomputing.com)
+- [PyPI](https://pypi.org/project/moss-anthropic/)
 
 ## License
 
-This package is licensed under the [Business Source License 1.1](LICENSE).
-
-- Free for evaluation, testing, and development
-- Free for non-production use
-- Production use requires a [MOSS subscription](https://mosscomputing.com/pricing)
-- Converts to Apache 2.0 on January 25, 2030
+Business Source License 1.1 - Production use requires a [MOSS subscription](https://mosscomputing.com/pricing).
